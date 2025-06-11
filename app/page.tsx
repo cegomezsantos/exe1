@@ -18,32 +18,42 @@ export default function SimuladorPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [sessionId, setSessionId] = useState<number | null>(null)
   const [sessionStarted, setSessionStarted] = useState(false)
+  const [isClient, setIsClient] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Verificar si estamos en el cliente para evitar problemas de hidratación
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (isClient) {
+      scrollToBottom()
+    }
+  }, [messages, isClient])
 
   useEffect(() => {
-    if (sessionId && inputRef.current) {
+    if (isClient && sessionId && inputRef.current) {
       inputRef.current.focus()
     }
-  }, [sessionId])
+  }, [sessionId, isClient])
 
   useEffect(() => {
-    if (!sessionStarted) {
+    if (isClient && !sessionStarted) {
       initializeSession()
       setSessionStarted(true)
     }
-  }, [sessionStarted])
+  }, [sessionStarted, isClient])
 
   const initializeSession = async () => {
+    if (!isClient) return
+    
     // Asignar sessionId inmediatamente
     const tempSessionId = Date.now()
     setSessionId(tempSessionId)
@@ -71,6 +81,8 @@ export default function SimuladorPage() {
   }
 
   const sendInitialMessage = async (sessionId: number) => {
+    if (!isClient) return
+    
     const systemPrompt = getConversationalPrompt('María', 'Coordinadora Académica')
 
     try {
@@ -133,7 +145,7 @@ export default function SimuladorPage() {
   }
 
   const sendMessage = async () => {
-    if (!userInput.trim() || isLoading || !sessionId) return
+    if (!isClient || !userInput.trim() || isLoading || !sessionId) return
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -202,7 +214,9 @@ export default function SimuladorPage() {
       // Error manejado silenciosamente
     } finally {
       setIsLoading(false)
-      inputRef.current?.focus()
+      if (isClient && inputRef.current) {
+        inputRef.current.focus()
+      }
     }
   }
 
@@ -214,10 +228,48 @@ export default function SimuladorPage() {
   }
 
   const handleRestart = () => {
+    if (!isClient) return
     setMessages([])
     setSessionStarted(false)
     setUserInput('')
     setSessionId(null)
+  }
+
+  // Mostrar loading state hasta que el componente se hidrate
+  if (!isClient) {
+    return (
+      <div className="flex flex-col h-screen bg-slate-50">
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Simulador Conversacional IA
+                </h1>
+                <p className="text-sm text-slate-700 font-medium">
+                  Sesión 1: Actividad de Entrada - Inteligencia Artificial para Coordinadores Educativos
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-slate-700 font-medium">
+                  Coordinadora Académica
+                </div>
+                <div className="text-xs text-gray-500 font-medium">
+                  Iniciando...
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+        
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-slate-600">Iniciando simulador...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
