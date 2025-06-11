@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getConversationalPrompt } from '@/lib/conversationalPrompts'
 import { formatChatText } from '@/lib/textUtils'
@@ -13,14 +14,37 @@ interface Message {
 }
 
 export default function SimulatorPage() {
+  const searchParams = useSearchParams()
   const [messages, setMessages] = useState<Message[]>([])
   const [userInput, setUserInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [sessionId, setSessionId] = useState<number | null>(null)
   const [hasStarted, setHasStarted] = useState(false)
+  const [isValidAccess, setIsValidAccess] = useState<boolean | null>(null)
+  const [userName, setUserName] = useState<string>('')
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Validar acceso desde aula virtual
+  useEffect(() => {
+    const maxParam = searchParams.get('max')
+    const namParam = searchParams.get('nam')
+    
+    // Validar que existe el parámetro max con el valor correcto
+    if (maxParam === '719368') {
+      setIsValidAccess(true)
+      // Extraer y formatear el nombre del usuario
+      if (namParam) {
+        const cleanName = decodeURIComponent(namParam).trim()
+        setUserName(cleanName)
+      } else {
+        setUserName('Estudiante')
+      }
+    } else {
+      setIsValidAccess(false)
+    }
+  }, [searchParams])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -38,7 +62,7 @@ export default function SimulatorPage() {
       const { data: session, error } = await supabase
         .from('sesiones_ejercicio')
         .insert({
-          user_id: 'test-user',
+          user_id: userName || 'test-user',
           estado: 'en_progreso'
         })
         .select()
@@ -51,12 +75,13 @@ export default function SimulatorPage() {
       // Continuar con sesión temporal
     }
 
-    // Enviar mensaje inicial
+    // Enviar mensaje inicial con el nombre del usuario
     await sendInitialMessage(tempSessionId)
   }
 
   const sendInitialMessage = async (sessionId: number) => {
-    const systemPrompt = getConversationalPrompt('María', 'Coordinadora Académica')
+    // Usar el nombre del usuario obtenido de los parámetros URL
+    const systemPrompt = getConversationalPrompt(userName || 'Estudiante', 'Coordinadora Académica')
 
     try {
       const response = await fetch('/api/chat', {
@@ -96,7 +121,7 @@ export default function SimulatorPage() {
           await supabase
             .from('interacciones_usuario')
             .insert({
-              user_id: 'test-user',
+              user_id: userName || 'test-user',
               mensaje_usuario: 'Iniciar conversación',
               respuesta_ia: data.message,
               fase_conversacion: 1,
@@ -143,7 +168,7 @@ export default function SimulatorPage() {
         content: msg.content
       }))
 
-      const systemPrompt = getConversationalPrompt('María', 'Coordinadora Académica') + 
+      const systemPrompt = getConversationalPrompt(userName || 'Estudiante', 'Coordinadora Académica') + 
         `\n\nCONTEXTO ACTUAL: Esta conversación ya tiene ${apiHistory.length} mensajes. Lee todo el historial y responde SOLO a lo que el usuario acaba de decir, sin repetir información ya establecida.`
 
       const response = await fetch('/api/chat', {
@@ -176,7 +201,7 @@ export default function SimulatorPage() {
           await supabase
             .from('interacciones_usuario')
             .insert({
-              user_id: 'test-user',
+              user_id: userName || 'test-user',
               mensaje_usuario: userMessage.content,
               respuesta_ia: data.message,
               fase_conversacion: 1,
@@ -210,6 +235,73 @@ export default function SimulatorPage() {
     setSessionId(null)
   }
 
+  // Página de acceso no autorizado
+  if (isValidAccess === false) {
+    return (
+      <div className="flex flex-col h-screen bg-red-50">
+        <header className="bg-white shadow-sm border-b border-red-200">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-red-600">
+                Acceso Restringido
+              </h1>
+              <p className="text-sm text-red-500 font-medium">
+                Simulador Conversacional IA - Coordinadores Educativos
+              </p>
+            </div>
+          </div>
+        </header>
+        
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto p-6">
+            <div className="mb-6">
+              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🚫</span>
+              </div>
+              <h2 className="text-xl font-semibold text-red-700 mb-3">
+                Acceso No Autorizado
+              </h2>
+              <p className="text-red-600 mb-4">
+                Este simulador debe ser accedido desde el aula virtual del curso. 
+                Por favor, regresa al curso y haz clic en el enlace correspondiente.
+              </p>
+              <div className="bg-red-100 border border-red-300 rounded-lg p-4 text-sm">
+                <p className="text-red-700">
+                  <strong>Instrucciones:</strong><br />
+                  1. Ve al aula virtual del curso<br />
+                  2. Busca la sección del simulador<br />
+                  3. Haz clic en el enlace oficial<br />
+                </p>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => window.history.back()}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            >
+              Regresar al Curso
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Loading mientras verifica acceso
+  if (isValidAccess === null) {
+    return (
+      <div className="flex flex-col h-screen bg-slate-50">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-slate-600">Verificando acceso...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Página de bienvenida
   if (!hasStarted) {
     return (
       <div className="flex flex-col h-screen bg-slate-50">
@@ -228,6 +320,9 @@ export default function SimulatorPage() {
                 <div className="text-sm text-slate-700 font-medium">
                   Coordinadora Académica
                 </div>
+                <div className="text-xs text-green-600 font-medium">
+                  ✅ {userName}
+                </div>
               </div>
             </div>
           </div>
@@ -240,7 +335,7 @@ export default function SimulatorPage() {
                 <span className="text-2xl">🤖</span>
               </div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                ¡Bienvenida al Simulador!
+                ¡Bienvenida {userName}!
               </h2>
               <p className="text-gray-600">
                 Prepárate para conversar con Alex, tu asistente de IA educativo. 
@@ -278,9 +373,12 @@ export default function SimulatorPage() {
               <div className="text-sm text-slate-700 font-medium">
                 Coordinadora Académica
               </div>
+              <div className="text-xs text-green-600 font-medium">
+                ✅ {userName}
+              </div>
               {sessionId && (
                 <div className="text-xs text-green-600 font-medium">
-                  ✅ Sesión activa
+                  Sesión activa
                 </div>
               )}
             </div>
@@ -288,8 +386,8 @@ export default function SimulatorPage() {
         </div>
       </header>
 
-      {/* Chat Container */}
-      <div className="flex-1 overflow-hidden">
+      {/* Chat Container con nuevo color de fondo */}
+      <div className="flex-1 overflow-hidden" style={{backgroundColor: '#D7ECF7'}}>
         <div className="max-w-4xl mx-auto h-full flex flex-col">
           
           {/* Messages */}
@@ -302,14 +400,17 @@ export default function SimulatorPage() {
                 <div
                   className={`max-w-3xl rounded-lg p-4 shadow-sm ${
                     message.role === 'user' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-white text-slate-900 border border-blue-200'
+                      ? 'text-black border border-gray-300' 
+                      : 'text-white border border-blue-300'
                   }`}
+                  style={{
+                    backgroundColor: message.role === 'user' ? '#FCF5DD' : '#00AEEF'
+                  }}
                 >
                   <div className="whitespace-pre-wrap">{message.content}</div>
                   <div 
                     className={`text-xs mt-2 font-medium ${
-                      message.role === 'user' ? 'text-blue-100' : 'text-slate-600'
+                      message.role === 'user' ? 'text-gray-600' : 'text-blue-100'
                     }`}
                   >
                     {message.timestamp.toLocaleTimeString()}
@@ -320,14 +421,17 @@ export default function SimulatorPage() {
             
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-white text-slate-900 border border-blue-200 rounded-lg p-4 shadow-sm">
+                <div 
+                  className="text-white border border-blue-300 rounded-lg p-4 shadow-sm"
+                  style={{backgroundColor: '#00AEEF'}}
+                >
                   <div className="flex items-center space-x-2">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                      <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                     </div>
-                    <span className="text-sm text-slate-600">Alex está escribiendo...</span>
+                    <span className="text-sm text-blue-100">Alex está escribiendo...</span>
                   </div>
                 </div>
               </div>

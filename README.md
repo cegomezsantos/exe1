@@ -6,6 +6,24 @@ Un simulador conversacional desarrollado con Next.js 14 que permite a coordinado
 
 Enseñar a coordinadores educativos cómo crear prompts efectivos para inteligencia artificial, a través de un flujo conversacional natural y una actividad práctica sobre redacción de correos educativos.
 
+## 🔐 Control de Acceso desde Aula Virtual
+
+El simulador está diseñado para ser accedido **exclusivamente desde el aula virtual** mediante parámetros específicos:
+
+### Parámetros URL Requeridos
+
+- **`max=719368`**: Código de autorización requerido (obligatorio)
+- **`nam=NombreUsuario`**: Nombre del usuario para personalización
+
+**Ejemplo de URL válida:**
+```
+https://tu-simulador.netlify.app/?max=719368&nam=María%20González
+```
+
+### Validación de Acceso
+- ✅ **Acceso autorizado**: Si `max=719368` → permite acceso al simulador
+- ❌ **Acceso denegado**: Si no existe `max` o tiene valor incorrecto → muestra página de error
+
 ## 🔧 Stack Tecnológico
 
 - **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS
@@ -16,12 +34,23 @@ Enseñar a coordinadores educativos cómo crear prompts efectivos para inteligen
 
 ## 📋 Características
 
-- **Chat conversacional natural** con Alex, asistente de IA educativo
-- **Flujo estructurado** de aprendizaje sobre prompts efectivos
-- **Interfaz limpia** sin formato markdown disruptivo
-- **Gestión de sesiones** con Supabase (opcional)
-- **Reinicio rápido** de conversaciones
-- **Responsive design** para múltiples dispositivos
+- **🔐 Control de acceso**: Integración con aula virtual mediante parámetros URL
+- **👤 Personalización**: Saludo personalizado con nombre del usuario
+- **🎨 Interfaz personalizada**: Colores institucionales específicos
+- **🤖 Chat conversacional natural** con Alex, asistente de IA educativo
+- **📚 Flujo estructurado** de aprendizaje sobre prompts efectivos
+- **🎯 Interfaz limpia** sin formato markdown disruptivo
+- **💾 Gestión de sesiones** con Supabase (opcional)
+- **🔄 Reinicio rápido** de conversaciones
+- **📱 Responsive design** para múltiples dispositivos
+
+## 🎨 Esquema de Colores
+
+El simulador utiliza colores específicos para optimizar la experiencia educativa:
+
+- **Fondo del área de chat**: `#D7ECF7` (azul claro)
+- **Mensajes de la IA (Alex)**: `#00AEEF` (azul institucional)
+- **Mensajes del usuario**: `#FCF5DD` (beige suave)
 
 ## 🚀 Instalación y Configuración
 
@@ -59,20 +88,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_clave_publica_de_supabase
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) para ver la aplicación.
+Abre [http://localhost:3000?max=719368&nam=TestUser](http://localhost:3000?max=719368&nam=TestUser) para probar la aplicación.
 
 ## 📁 Estructura del Proyecto
 
 ```
 simulador-conversacional-ia/
 ├── app/
-│   ├── page.tsx                  # Página principal del simulador
+│   ├── page.tsx                  # Página principal con control de acceso
 │   ├── conversational/           # Versión alternativa del chat
 │   ├── api/
 │   │   └── chat/
 │   │       └── route.ts          # API para comunicación con Gemini
 │   ├── globals.css
-│   └── layout.tsx
+│   └── layout.tsx               # Layout con Suspense para parámetros URL
 ├── lib/
 │   ├── supabase.ts              # Configuración de Supabase
 │   ├── conversationalPrompts.ts # Prompts para el flujo educativo
@@ -85,11 +114,12 @@ simulador-conversacional-ia/
 
 El simulador guía al usuario a través de:
 
-1. **Saludo personalizado** - Alex pregunta por el nombre preferido
-2. **Introducción a la sesión** - Explicación de "Sesión 1: Actividad de Entrada"
-3. **Enseñanza de prompts efectivos** - Características clave (claridad, contexto, objetivo, formato, tono)
-4. **Actividad práctica** - Crear un correo para responder consulta estudiantil sobre metodología docente
-5. **Reflexión y cierre** - Evaluación del aprendizaje y próximos pasos
+1. **Validación de acceso** - Verificación de parámetros del aula virtual
+2. **Saludo personalizado** - Alex saluda al usuario por su nombre
+3. **Introducción a la sesión** - Explicación de "Sesión 1: Actividad de Entrada"
+4. **Enseñanza de prompts efectivos** - Características clave (claridad, contexto, objetivo, formato, tono)
+5. **Actividad práctica** - Crear un correo para responder consulta estudiantil sobre metodología docente
+6. **Reflexión y cierre** - Evaluación del aprendizaje y próximos pasos
 
 ## 🗃️ Base de Datos (Opcional)
 
@@ -149,6 +179,35 @@ CREATE TABLE interacciones_usuario (
 2. Configura las variables de entorno
 3. Deploy automático
 
+## 🔗 Integración con Aula Virtual
+
+Para integrar el simulador en tu aula virtual:
+
+### Opción 1: Enlace Directo
+```html
+<a href="https://tu-simulador.netlify.app/?max=719368&nam=NombreEstudiante" target="_blank">
+  Acceder al Simulador Conversacional IA
+</a>
+```
+
+### Opción 2: iFrame Embebido
+```html
+<iframe 
+  src="https://tu-simulador.netlify.app/?max=719368&nam=NombreEstudiante"
+  width="100%" 
+  height="800px" 
+  frameborder="0">
+</iframe>
+```
+
+### Opción 3: JavaScript Dinámico
+```javascript
+function abrirSimulador(nombreUsuario) {
+  const url = `https://tu-simulador.netlify.app/?max=719368&nam=${encodeURIComponent(nombreUsuario)}`;
+  window.open(url, '_blank');
+}
+```
+
 ## 🚨 Solución de Problemas
 
 ### **Error de Build en Netlify: "Export encountered errors"**
@@ -164,6 +223,15 @@ CREATE TABLE interacciones_usuario (
 2. ✅ No uses nombres como `EXT_PUBLIC_SUPABASE_ANON_KEY`
 
 3. ✅ Asegúrate de que tu API key de Gemini sea válida
+
+### **Página de "Acceso Restringido"**
+
+**Causa:** Falta el parámetro `max=719368` en la URL
+
+**Solución:**
+- ✅ Accede siempre desde el aula virtual
+- ✅ Verifica que la URL incluya `?max=719368`
+- ✅ Para pruebas, usa: `http://localhost:3000?max=719368&nam=TestUser`
 
 ### **Error: "Module not found"**
 - Verifica que no existan archivos temporales o rutas rotas
@@ -184,8 +252,9 @@ CREATE TABLE interacciones_usuario (
 Para desarrollar nuevas características:
 
 ```bash
-# Ejecutar en modo desarrollo
+# Ejecutar en modo desarrollo con parámetros de prueba
 npm run dev
+# Luego visita: http://localhost:3000?max=719368&nam=TestUser
 
 # Verificar tipos TypeScript
 npm run type-check
