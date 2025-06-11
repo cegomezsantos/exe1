@@ -1,7 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Eliminamos la configuración experimental que ya no es necesaria
-  // en versiones recientes de Next.js
+  // Configuración para Netlify
+  trailingSlash: true,
+  images: {
+    unoptimized: true
+  },
+  // Evitar problemas de SSR
+  experimental: {
+    esmExternals: false
+  }
 }
 
 module.exports = nextConfig 

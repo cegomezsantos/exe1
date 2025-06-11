@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getConversationalPrompt } from '@/lib/conversationalPrompts'
 import { formatChatText } from '@/lib/textUtils'
@@ -12,54 +12,29 @@ interface Message {
   timestamp: Date
 }
 
-export default function SimuladorPage() {
+export default function SimulatorPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [userInput, setUserInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [sessionId, setSessionId] = useState<number | null>(null)
-  const [sessionStarted, setSessionStarted] = useState(false)
-  const [isClient, setIsClient] = useState(false)
+  const [hasStarted, setHasStarted] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  // Verificar si estamos en el cliente para evitar problemas de hidratación
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  useEffect(() => {
-    if (isClient) {
-      scrollToBottom()
-    }
-  }, [messages, isClient])
-
-  useEffect(() => {
-    if (isClient && sessionId && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [sessionId, isClient])
-
-  useEffect(() => {
-    if (isClient && !sessionStarted) {
-      initializeSession()
-      setSessionStarted(true)
-    }
-  }, [sessionStarted, isClient])
-
-  const initializeSession = async () => {
-    if (!isClient) return
+  const startSession = async () => {
+    if (hasStarted) return
     
-    // Asignar sessionId inmediatamente
+    setHasStarted(true)
     const tempSessionId = Date.now()
     setSessionId(tempSessionId)
 
+    // Crear sesión en Supabase (opcional)
     try {
-      // Intentar crear sesión en Supabase (opcional)
       const { data: session, error } = await supabase
         .from('sesiones_ejercicio')
         .insert({
@@ -73,7 +48,7 @@ export default function SimuladorPage() {
         setSessionId(session.id)
       }
     } catch (dbError) {
-      // Continuar con sesión temporal si falla la BD
+      // Continuar con sesión temporal
     }
 
     // Enviar mensaje inicial
@@ -81,8 +56,6 @@ export default function SimuladorPage() {
   }
 
   const sendInitialMessage = async (sessionId: number) => {
-    if (!isClient) return
-    
     const systemPrompt = getConversationalPrompt('María', 'Coordinadora Académica')
 
     try {
@@ -113,8 +86,12 @@ export default function SimuladorPage() {
         }
         
         setMessages([initialMessage])
+        setTimeout(scrollToBottom, 100)
         
-        // Guardar en la base de datos (opcional)
+        // Enfocar input
+        setTimeout(() => inputRef.current?.focus(), 200)
+        
+        // Guardar en BD (opcional)
         try {
           await supabase
             .from('interacciones_usuario')
@@ -132,7 +109,6 @@ export default function SimuladorPage() {
         }
       }
     } catch (error) {
-      // Mostrar error amigable al usuario
       const errorMessage: Message = {
         id: `ai-${Date.now()}`,
         role: 'assistant',
@@ -141,11 +117,12 @@ export default function SimuladorPage() {
       }
       
       setMessages([errorMessage])
+      setTimeout(scrollToBottom, 100)
     }
   }
 
   const sendMessage = async () => {
-    if (!isClient || !userInput.trim() || isLoading || !sessionId) return
+    if (!userInput.trim() || isLoading || !sessionId) return
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -157,9 +134,9 @@ export default function SimuladorPage() {
     setMessages(prev => [...prev, userMessage])
     setUserInput('')
     setIsLoading(true)
+    setTimeout(scrollToBottom, 100)
 
     try {
-      // Construir historial para la API
       const conversationHistory = [...messages, userMessage]
       const apiHistory = conversationHistory.map(msg => ({
         role: msg.role,
@@ -192,6 +169,7 @@ export default function SimuladorPage() {
         }
 
         setMessages(prev => [...prev, aiMessage])
+        setTimeout(scrollToBottom, 100)
 
         // Guardar en BD (opcional)
         try {
@@ -214,9 +192,7 @@ export default function SimuladorPage() {
       // Error manejado silenciosamente
     } finally {
       setIsLoading(false)
-      if (isClient && inputRef.current) {
-        inputRef.current.focus()
-      }
+      setTimeout(() => inputRef.current?.focus(), 100)
     }
   }
 
@@ -228,15 +204,13 @@ export default function SimuladorPage() {
   }
 
   const handleRestart = () => {
-    if (!isClient) return
     setMessages([])
-    setSessionStarted(false)
+    setHasStarted(false)
     setUserInput('')
     setSessionId(null)
   }
 
-  // Mostrar loading state hasta que el componente se hidrate
-  if (!isClient) {
+  if (!hasStarted) {
     return (
       <div className="flex flex-col h-screen bg-slate-50">
         <header className="bg-white shadow-sm border-b">
@@ -254,18 +228,32 @@ export default function SimuladorPage() {
                 <div className="text-sm text-slate-700 font-medium">
                   Coordinadora Académica
                 </div>
-                <div className="text-xs text-gray-500 font-medium">
-                  Iniciando...
-                </div>
               </div>
             </div>
           </div>
         </header>
         
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-slate-600">Iniciando simulador...</p>
+          <div className="text-center max-w-md">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🤖</span>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                ¡Bienvenida al Simulador!
+              </h2>
+              <p className="text-gray-600">
+                Prepárate para conversar con Alex, tu asistente de IA educativo. 
+                Aprenderás sobre prompts efectivos y comunicación digital.
+              </p>
+            </div>
+            
+            <button
+              onClick={startSession}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors shadow-lg hover:shadow-xl"
+            >
+              Comenzar Conversación
+            </button>
           </div>
         </div>
       </div>

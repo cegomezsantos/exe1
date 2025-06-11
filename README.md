@@ -120,10 +120,29 @@ CREATE TABLE interacciones_usuario (
 
 ## 🌐 Deployment
 
-### Netlify
-1. Conecta tu repositorio de GitHub
-2. Configura las variables de entorno en Netlify
-3. Deploy automático
+### Netlify (Recomendado)
+
+**⚠️ IMPORTANTE: Configuración de Variables de Entorno en Netlify**
+
+1. Ve a **Site Settings > Environment Variables** en tu panel de Netlify
+2. Agrega EXACTAMENTE estas variables (respeta los nombres):
+   ```
+   GEMINI_API_KEY = tu_clave_de_gemini
+   NEXT_PUBLIC_SUPABASE_URL = tu_url_de_supabase
+   NEXT_PUBLIC_SUPABASE_ANON_KEY = tu_clave_publica_de_supabase
+   ```
+
+3. **NO uses variaciones** como `EXT_PUBLIC_SUPABASE_ANON_KEY` - esto causa errores de build
+
+**Configuración de Build:**
+- Build command: `npm run build`
+- Publish directory: `.next`
+- Node version: `18`
+
+**El proyecto incluye:**
+- ✅ `netlify.toml` configurado
+- ✅ Plugin oficial de Next.js para Netlify
+- ✅ Configuración optimizada para deployment
 
 ### Vercel
 1. Importa el proyecto desde GitHub
@@ -132,14 +151,28 @@ CREATE TABLE interacciones_usuario (
 
 ## 🚨 Solución de Problemas
 
-**Error: "Module not found"**
+### **Error de Build en Netlify: "Export encountered errors"**
+
+**Causa:** Variables de entorno mal configuradas o problemas de hidratación
+
+**Solución:**
+1. ✅ Verifica que las variables de entorno en Netlify sean EXACTAMENTE:
+   - `GEMINI_API_KEY`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+2. ✅ No uses nombres como `EXT_PUBLIC_SUPABASE_ANON_KEY`
+
+3. ✅ Asegúrate de que tu API key de Gemini sea válida
+
+### **Error: "Module not found"**
 - Verifica que no existan archivos temporales o rutas rotas
-- Ejecuta `npm run build` para verificar errores de compilación
+- Ejecuta `npm run build` localmente para verificar errores
 
 **Error: "GEMINI_API_KEY not found"**
-- Asegúrate de que el archivo `.env.local` existe
-- Verifica que la clave empiece con `NEXT_PUBLIC_` si es necesaria en el cliente
-- Reinicia el servidor de desarrollo después de cambiar variables de entorno
+- Asegúrate de que el archivo `.env.local` existe localmente
+- En Netlify, verifica las variables en Site Settings > Environment Variables
+- Reinicia el deployment después de cambiar variables de entorno
 
 **Chat no responde:**
 - Verifica tu conexión a internet
