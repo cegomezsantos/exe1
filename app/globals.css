@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+/* Estilos personalizados para el chat */
+.chat-container {
+  height: calc(100vh - 200px);
+}
+
+.message-bubble {
+  @apply p-4 rounded-lg max-w-md shadow-md;
+}
+
+.message-user {
+  @apply bg-blue-600 text-white ml-auto font-medium;
+}
+
+.message-ai {
+  @apply bg-white text-slate-900 border-2 border-blue-100 font-medium;
+}
+
+.typing-indicator {
+  @apply flex space-x-1;
+}
+
+.typing-dot {
+  @apply w-3 h-3 bg-blue-500 rounded-full animate-pulse;
+} 
