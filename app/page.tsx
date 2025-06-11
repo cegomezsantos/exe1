@@ -32,7 +32,7 @@ export default function SimulatorPage() {
     const namParam = searchParams.get('nam')
     
     // Validar que existe el parámetro max con el valor correcto
-    if (maxParam === '719368') {
+    if (maxParam === '719387') {
       setIsValidAccess(true)
       // Extraer y formatear el nombre del usuario
       if (namParam) {
